@@ -1,0 +1,145 @@
+services:
+  auth-service:
+    build: ./backend/services/auth-service
+    ports:
+      - "${AUTH_PORT:-3001}:3001"
+    environment:
+      - AUTH_PORT=${AUTH_PORT}
+      - AUTH_MONGO_URI=${AUTH_MONGO_URI}
+      - AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
+      - NODE_ENV=${NODE_ENV}
+    depends_on:
+      - auth-mongo
+    volumes:
+      - ./backend/mongo:/certs:ro
+    networks:
+      - my_network
+
+  auth-mongo:
+    image: mongo
+    container_name: auth-mongo
+    command:
+      - mongod
+      - --tlsMode=requireTLS
+      - --tlsCertificateKeyFile=/certs/mongo.pem
+      - --tlsCAFile=/certs/ca.pem
+    volumes:
+      - ./backend/mongo:/certs:ro
+      - auth-mongo-data:/data/db
+    networks:
+      - my_network
+
+  product-service:
+    build: ./backend/services/product-service
+    ports:
+      - "${PRODUCT_PORT:-3002}:3002"
+    environment:
+      - PRODUCT_PORT=${PRODUCT_PORT}
+      - PRODUCT_MONGO_URI=${PRODUCT_MONGO_URI}
+      - AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+    depends_on:
+      - product-mongo
+    volumes:
+      - ./backend/mongo:/certs:ro
+    networks:
+      - my_network
+
+  product-mongo:
+    image: mongo
+    container_name: product-mongo
+    command:
+      - mongod
+      - --tlsMode=requireTLS
+      - --tlsCertificateKeyFile=/certs/mongo.pem
+      - --tlsCAFile=/certs/ca.pem
+    volumes:
+      - ./backend/mongo:/certs:ro
+      - product-mongo-data:/data/db
+    networks:
+      - my_network
+
+  order-service:
+    build: ./backend/services/order-service
+    ports:
+      - "${ORDER_PORT:-3003}:3003"
+    environment:
+      - ORDER_PORT=${ORDER_PORT}
+      - ORDER_MONGO_URI=${ORDER_MONGO_URI}
+      - AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+    depends_on:
+      - order-mongo
+    volumes:
+      - ./backend/mongo:/certs:ro
+    networks:
+      - my_network
+
+  order-mongo:
+    image: mongo
+    container_name: order-mongo
+    command:
+      - mongod
+      - --tlsMode=requireTLS
+      - --tlsCertificateKeyFile=/certs/mongo.pem
+      - --tlsCAFile=/certs/ca.pem
+    volumes:
+      - ./backend/mongo:/certs:ro
+      - order-mongo-data:/data/db
+    networks:
+      - my_network
+
+  orderitem-service:
+    build: ./backend/services/orderItem-service
+    ports:
+      - "${ORDERITEM_PORT:-3004}:3004"
+    environment:
+      - ORDERITEM_PORT=${ORDERITEM_PORT}
+      - ORDERITEM_MONGO_URI=${ORDERITEM_MONGO_URI}
+      - AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+    depends_on:
+      - orderitem-mongo
+    volumes:
+      - ./backend/mongo:/certs:ro
+    networks:
+      - my_network
+
+  orderitem-mongo:
+    image: mongo
+    container_name: orderitem-mongo
+    command:
+      - mongod
+      - --tlsMode=requireTLS
+      - --tlsCertificateKeyFile=/certs/mongo.pem
+      - --tlsCAFile=/certs/ca.pem
+    volumes:
+      - ./backend/mongo:/certs:ro
+      - orderitem-mongo-data:/data/db
+    networks:
+      - my_network
+  nginx:
+    build:
+      context: ./backend/nginx
+    ports:
+      - "443:443"  
+      - "80:80"    
+    volumes:
+      - ./backend/nginx/ssl:/etc/nginx/ssl:ro
+      - ./backend/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - order-service
+      - product-service
+      - auth-service
+    networks:
+      - my_network
+
+networks:
+  my_network:
+    driver: bridge
+
+volumes:
+  auth-mongo-data:
+  product-mongo-data:
+  order-mongo-data:
+  orderitem-mongo-data:
